@@ -11,10 +11,15 @@ import argparse
 import tempfile
 import queue
 import sys
+from time import sleep
 
+import pydub.silence
+import simpleaudio
 import sounddevice as sd
+import soundfile
 import soundfile as sf
 import numpy  # Make sure NumPy is loaded before it is used in the callback
+from pydub import AudioSegment
 
 from main import get_target_device
 
@@ -63,14 +68,14 @@ def callback(indata, frames, time, status):
 
 targetDevice = get_target_device()
 print(targetDevice)
+# soundfile expects an int, sounddevice provides a float:
+samplerate = int(targetDevice['defaultSampleRate'])
+channels = targetDevice['maxInputChannels']
 
 try:
-    # soundfile expects an int, sounddevice provides a float:
-    samplerate = int(targetDevice['defaultSampleRate'])
-    channels = targetDevice['maxInputChannels']
     if args.filename is None:
-        args.filename = tempfile.mktemp(prefix='delme_rec_unlimited_',
-                                        suffix='.wav', dir='')
+        args.filename = tempfile.mktemp(prefix='piano_raw_',
+                                        suffix='.wav', dir='piano_log')
 
     # Make sure the file is opened before recording anything:
     with sf.SoundFile(args.filename, mode='x', samplerate=samplerate,
@@ -81,7 +86,18 @@ try:
             print('press Ctrl+C to stop the recording')
             print('#' * 80)
             while True:
-                file.write(q.get())
+                sleep(5)
+                data = []
+                while not q.empty():
+                    data.append(q.get())
+
+                print('Analyzing...' + len(data).__str__())
+                # wave_obj = simpleaudio.WaveObject(data, 2, 2, 44100)
+                # print(wave_obj)
+
+                for chunk in data:
+                    file.write(chunk)
+
 except KeyboardInterrupt:
     print('\nRecording finished: ' + repr(args.filename))
     parser.exit(0)
