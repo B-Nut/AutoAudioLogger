@@ -4,6 +4,8 @@
 The soundfile module (https://python-soundfile.readthedocs.io/)
 has to be installed!
 
+Modified by BNut to use the main.py script to get the target device
+
 """
 import argparse
 import tempfile
@@ -13,6 +15,8 @@ import sys
 import sounddevice as sd
 import soundfile as sf
 import numpy  # Make sure NumPy is loaded before it is used in the callback
+
+from main import get_target_device
 
 assert numpy  # avoid "imported but unused" message (W0611)
 
@@ -44,10 +48,6 @@ parser.add_argument(
     '-d', '--device', type=int_or_str,
     help='input device (numeric ID or substring)')
 parser.add_argument(
-    '-r', '--samplerate', type=int, help='sampling rate')
-parser.add_argument(
-    '-c', '--channels', type=int, default=1, help='number of input channels')
-parser.add_argument(
     '-t', '--subtype', type=str, help='sound file subtype (e.g. "PCM_24")')
 args = parser.parse_args(remaining)
 
@@ -61,20 +61,22 @@ def callback(indata, frames, time, status):
     q.put(indata.copy())
 
 
+targetDevice = get_target_device()
+print(targetDevice)
+
 try:
-    if args.samplerate is None:
-        device_info = sd.query_devices(args.device, 'input')
-        # soundfile expects an int, sounddevice provides a float:
-        args.samplerate = int(device_info['default_samplerate'])
+    # soundfile expects an int, sounddevice provides a float:
+    samplerate = int(targetDevice['defaultSampleRate'])
+    channels = targetDevice['maxInputChannels']
     if args.filename is None:
         args.filename = tempfile.mktemp(prefix='delme_rec_unlimited_',
                                         suffix='.wav', dir='')
 
     # Make sure the file is opened before recording anything:
-    with sf.SoundFile(args.filename, mode='x', samplerate=args.samplerate,
-                      channels=args.channels, subtype=args.subtype) as file:
-        with sd.InputStream(samplerate=args.samplerate, device=args.device,
-                            channels=args.channels, callback=callback):
+    with sf.SoundFile(args.filename, mode='x', samplerate=samplerate,
+                      channels=channels, subtype=args.subtype) as file:
+        with sd.InputStream(samplerate=samplerate, device=targetDevice['index'],
+                            channels=channels, callback=callback):
             print('#' * 80)
             print('press Ctrl+C to stop the recording')
             print('#' * 80)
