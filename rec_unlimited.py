@@ -86,17 +86,25 @@ try:
             print('press Ctrl+C to stop the recording')
             print('#' * 80)
             while True:
-                sleep(5)
+                sleep(1)
                 data = []
-                while not q.empty():
+                while q.qsize() > 4:
+                    data.append(q.get())
+                    data.append(q.get())
+                    data.append(q.get())
                     data.append(q.get())
 
-                print('Analyzing...' + len(data).__str__())
-                # wave_obj = simpleaudio.WaveObject(data, 2, 2, 44100)
-                # print(wave_obj)
+                bytes_data = numpy.array(data)
+                # print(len(bytes_data))
 
-                for chunk in data:
-                    file.write(chunk)
+                seq = pydub.AudioSegment(bytes_data, frame_rate=44100, sample_width=2, channels=2)
+                # print(seq.max_dBFS)
+                if seq.max_dBFS > -4:
+                    print('Write Audio')
+                    for chunk in data:
+                        file.write(chunk)
+                # else:
+                #     print('Skip Audio')
 
 except KeyboardInterrupt:
     print('\nRecording finished: ' + repr(args.filename))
