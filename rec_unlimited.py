@@ -8,21 +8,12 @@ from time import sleep
 import sounddevice
 import soundfile
 import numpy  # Make sure NumPy is loaded before it is used in the callback
+from pynormalize import pynormalize
 
 from main import get_target_device, RECORDING_THRESHOLD, CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
     RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS
 
 assert numpy  # avoid "imported but unused" message (W0611)
-
-q = queue.Queue()
-
-
-def callback(indata, frames, time, status):
-    """This is called (from a separate thread) for each audio block."""
-    if status:
-        print(status, file=sys.stderr)
-    q.put(indata.copy())
-
 
 targetDevice = get_target_device()
 print(targetDevice)
@@ -36,31 +27,34 @@ def create_file_name():
     return tempfile.mktemp(prefix='piano_raw_', suffix='.wav', dir='piano_log')
 
 
-def write_to_file(file, queuedData):
-    for timeChunk in queuedData:
-        for chunk in timeChunk:
-            file.write(chunk)
-
-
 def start_recording_agent():
+    q = queue.Queue()
+    queuedIntervals = []
+
     silentCount: int = 0
     loudCount: int = 0
-    queuedData = []
-    recording = False
+
     file: soundfile.SoundFile
+    writing = False
 
     def flush_queue():
-        while len(queuedData) > RETAIN_INTERVALS:
-            queuedData.remove(queuedData[0])
+        while len(queuedIntervals) > RETAIN_INTERVALS:
+            queuedIntervals.remove(queuedIntervals[0])
 
     def reset_recording():
         nonlocal silentCount
         silentCount = 0
         nonlocal loudCount
         loudCount = 0
-        nonlocal recording
-        recording = False
+        nonlocal writing
+        writing = False
         flush_queue()
+
+    def callback(indata, frames, time, status):
+        """This is called (from a separate thread) for each audio block."""
+        if status:
+            print(status, file=sys.stderr)
+        q.put(indata.copy())
 
     # Start recording to queue "q"
     with sounddevice.InputStream(
@@ -78,9 +72,8 @@ def start_recording_agent():
                 for _ in range(arrayLength):
                     data.append(q.get())
 
-            bytes_data = numpy.array(data)
-            loudness = audioop.rms(bytes_data, int(arrayLength / 2))
-            queuedData.append(bytes_data)
+            loudness = audioop.findmax(numpy.array(data), int(arrayLength / 2))
+            queuedIntervals.append(data)
 
             if loudness > RECORDING_THRESHOLD:
                 print('Loud Audio: ' + str(loudness))
@@ -95,24 +88,25 @@ def start_recording_agent():
                 flush_queue()
                 silentCount = 0
             else:
-                if (loudCount >= MINIMUM_RECORDING_INTERVALS) & (recording is False):
+                if (loudCount >= MINIMUM_RECORDING_INTERVALS) & (writing is False):
                     filename = create_file_name()
                     print('Writing to new file: ' + filename)
                     file = soundfile.SoundFile(filename, mode='x', samplerate=samplerate, channels=channels)
-                    recording = True
-                print('Recorded' + str(loudCount) + ' interval(s).\nWriting: ' + str(recording))
+                    writing = True
+                print('Recorded ' + str(loudCount) + ' interval(s).\nWriting: ' + str(writing))
 
             if silentCount > CLOSING_SILENT_INTERVALS:
-                if recording:
+                if writing:
                     print('Closing recording: ' + filename)
                     file.close()
+                    pynormalize.process_files([filename], -28, 'piano_log')
                 reset_recording()
 
-            if recording:
-                for timeChunk in queuedData:
-                    for chunk in timeChunk:
-                        file.write(chunk)
-                queuedData.clear()
+            if writing:
+                for timeInterval in queuedIntervals:
+                    for data in timeInterval:
+                        file.write(data)
+                queuedIntervals.clear()
 
 
 start_recording_agent()
