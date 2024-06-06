@@ -8,6 +8,7 @@ Modified by BNut to use the main.py script to get the target device
 
 """
 import argparse
+import audioop
 import tempfile
 import queue
 import sys
@@ -15,13 +16,13 @@ from time import sleep
 
 import pydub.silence
 import simpleaudio
-import sounddevice as sd
+import sounddevice
 import soundfile
-import soundfile as sf
+import soundfile
 import numpy  # Make sure NumPy is loaded before it is used in the callback
 from pydub import AudioSegment
 
-from main import get_target_device
+from main import get_target_device, RECORDING_THRESHOLD
 
 assert numpy  # avoid "imported but unused" message (W0611)
 
@@ -40,7 +41,7 @@ parser.add_argument(
     help='show list of audio devices and exit')
 args, remaining = parser.parse_known_args()
 if args.list_devices:
-    print(sd.query_devices())
+    print(sounddevice.query_devices())
     parser.exit(0)
 parser = argparse.ArgumentParser(
     description=__doc__,
@@ -78,33 +79,28 @@ try:
                                         suffix='.wav', dir='piano_log')
 
     # Make sure the file is opened before recording anything:
-    with sf.SoundFile(args.filename, mode='x', samplerate=samplerate,
-                      channels=channels, subtype=args.subtype) as file:
-        with sd.InputStream(samplerate=samplerate, device=targetDevice['index'],
-                            channels=channels, callback=callback):
+    with soundfile.SoundFile(args.filename, mode='x', samplerate=samplerate,
+                             channels=channels, subtype=args.subtype) as file:
+        with sounddevice.InputStream(samplerate=samplerate, device=targetDevice['index'],
+                                     channels=channels, callback=callback):
             print('#' * 80)
             print('press Ctrl+C to stop the recording')
             print('#' * 80)
             while True:
-                sleep(1)
+                sleep(3)
                 data = []
-                while q.qsize() > 4:
-                    data.append(q.get())
-                    data.append(q.get())
-                    data.append(q.get())
-                    data.append(q.get())
+                while q.qsize() > 8:
+                    for _ in range(8):
+                        data.append(q.get())
 
                 bytes_data = numpy.array(data)
-                # print(len(bytes_data))
-
-                seq = pydub.AudioSegment(bytes_data, frame_rate=44100, sample_width=2, channels=2)
-                # print(seq.max_dBFS)
-                if seq.max_dBFS > -4:
-                    print('Write Audio')
+                loudness = audioop.rms(bytes_data, 4)
+                if loudness > RECORDING_THRESHOLD:
+                    print('Write Audio: ' + str(loudness))
                     for chunk in data:
                         file.write(chunk)
-                # else:
-                #     print('Skip Audio')
+                else:
+                    print('Skip Audio: ' + str(loudness))
 
 except KeyboardInterrupt:
     print('\nRecording finished: ' + repr(args.filename))

@@ -1,6 +1,7 @@
 import pyaudio
 
 TARGET_DEVICE_NAME = "Mikrofon (3- USB Audio CODEC )"
+RECORDING_THRESHOLD = 990000000
 
 pyAudio = pyaudio.PyAudio()
 
