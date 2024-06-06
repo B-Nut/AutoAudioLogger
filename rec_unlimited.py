@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""Create a recording with arbitrary duration.
-
-The soundfile module (https://python-soundfile.readthedocs.io/)
-has to be installed!
-
-Modified by BNut to use the main.py script to get the target device
-
-"""
 import argparse
 import audioop
 import tempfile
@@ -14,13 +6,9 @@ import queue
 import sys
 from time import sleep
 
-import pydub.silence
-import simpleaudio
 import sounddevice
 import soundfile
-import soundfile
 import numpy  # Make sure NumPy is loaded before it is used in the callback
-from pydub import AudioSegment
 
 from main import get_target_device, RECORDING_THRESHOLD
 
@@ -73,37 +61,85 @@ print(targetDevice)
 samplerate = int(targetDevice['defaultSampleRate'])
 channels = targetDevice['maxInputChannels']
 
-try:
-    if args.filename is None:
-        args.filename = tempfile.mktemp(prefix='piano_raw_',
-                                        suffix='.wav', dir='piano_log')
 
-    # Make sure the file is opened before recording anything:
-    with soundfile.SoundFile(args.filename, mode='x', samplerate=samplerate,
-                             channels=channels, subtype=args.subtype) as file:
-        with sounddevice.InputStream(samplerate=samplerate, device=targetDevice['index'],
-                                     channels=channels, callback=callback):
-            print('#' * 80)
-            print('press Ctrl+C to stop the recording')
-            print('#' * 80)
-            while True:
-                sleep(3)
-                data = []
-                while q.qsize() > 8:
-                    for _ in range(8):
-                        data.append(q.get())
+def create_file_name():
+    return tempfile.mktemp(prefix='piano_raw_', suffix='.wav', dir='piano_log')
 
-                bytes_data = numpy.array(data)
-                loudness = audioop.rms(bytes_data, 4)
-                if loudness > RECORDING_THRESHOLD:
-                    print('Write Audio: ' + str(loudness))
-                    for chunk in data:
+
+def write_to_file(file, queuedData):
+    for timeChunk in queuedData:
+        for chunk in timeChunk:
+            file.write(chunk)
+
+
+def start_recording_agent():
+    silentCount = 0
+    loudCount = 0
+    queuedData = []
+    recording = False
+
+    def reset_recording():
+        nonlocal silentCount
+        silentCount = 0
+        nonlocal loudCount
+        loudCount = 0
+        queuedData.clear()
+        nonlocal recording
+        recording = False
+
+    # Start recording to queue "q"
+    with sounddevice.InputStream(
+            samplerate=samplerate,
+            device=targetDevice['index'],
+            channels=channels,
+            callback=callback,
+    ):
+        # Loopies! \( ^_^)/
+        while True:
+            sleep(3)  # Chill for three seconds, gotta record stuff at *some* point...
+            data = []
+            while q.qsize() > 8:
+                for _ in range(8):
+                    data.append(q.get())
+
+            bytes_data = numpy.array(data)
+            loudness = audioop.rms(bytes_data, 4)
+
+            loudNow = loudness > RECORDING_THRESHOLD
+            file: soundfile.SoundFile
+
+            if loudNow:
+                print('Loud Audio: ' + str(loudness))
+                loudCount += 1
+                silentCount = 0
+            else:
+                print('Silent Audio: ' + str(loudness))
+                silentCount += 1
+
+            if loudCount == 0:
+                print('Standby...')
+                if len(queuedData) == 2:
+                    queuedData.remove(queuedData[0])
+                silentCount = 0
+            elif loudCount > 0 and recording is False:
+                filename = create_file_name()
+                print('Starting new file: ' + filename)
+                file = soundfile.SoundFile(filename, mode='x', samplerate=samplerate, channels=channels,
+                                           subtype=args.subtype)
+                recording = True
+
+            queuedData.append(bytes_data)
+
+            if recording:
+                for timeChunk in queuedData:
+                    for chunk in timeChunk:
                         file.write(chunk)
-                else:
-                    print('Skip Audio: ' + str(loudness))
+                queuedData.clear()
 
-except KeyboardInterrupt:
-    print('\nRecording finished: ' + repr(args.filename))
-    parser.exit(0)
-except Exception as e:
-    parser.exit(type(e).__name__ + ': ' + str(e))
+            if silentCount >= 2:
+                print('Closing recording: ' + filename)
+                file.close()
+                reset_recording()
+
+
+start_recording_agent()
