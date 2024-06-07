@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import audioop
-import tempfile
+import datetime
+import os.path
 import queue
 import sys
 from time import sleep
@@ -11,7 +12,7 @@ import numpy  # Make sure NumPy is loaded before it is used in the callback
 from pynormalize import pynormalize
 
 from main import get_target_device, RECORDING_THRESHOLD, CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
-    RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS
+    RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, NORMALIZATION_LEVEL
 
 assert numpy  # avoid "imported but unused" message (W0611)
 
@@ -24,7 +25,8 @@ arrayLength = 4 * channels
 
 
 def create_file_name():
-    return tempfile.mktemp(prefix='piano_raw_', suffix='.wav', dir='piano_log')
+    timestring = datetime.datetime.strftime(datetime.datetime.now(), '%d.%m.%Y_%H-%M-%S')
+    return os.path.join(TARGET_DIR, timestring + '_audio_log' + '.wav')
 
 
 def start_recording_agent():
@@ -99,7 +101,7 @@ def start_recording_agent():
                 if writing:
                     print('Closing recording: ' + filename)
                     file.close()
-                    pynormalize.process_files([filename], -28, 'piano_log')
+                    pynormalize.process_files([filename], NORMALIZATION_LEVEL, TARGET_DIR)
                 reset_recording()
 
             if writing:
