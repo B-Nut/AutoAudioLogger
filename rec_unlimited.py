@@ -25,7 +25,7 @@ arrayLength = 4 * channels
 
 
 def create_file_name():
-    timestring = datetime.datetime.strftime(datetime.datetime.now(), '%d.%m.%Y_%H-%M-%S')
+    timestring = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H-%M-%S')
     return os.path.join(TARGET_DIR, timestring + '_audio_log' + '.wav')
 
 
@@ -95,7 +95,7 @@ def start_recording_agent():
                     print('Writing to new file: ' + filename)
                     file = soundfile.SoundFile(filename, mode='x', samplerate=samplerate, channels=channels)
                     writing = True
-                print('Recorded ' + str(loudCount) + 'loud interval(s).\nWriting: ' + str(writing))
+                print('Recorded ' + str(loudCount) + ' loud interval(s).\nWriting: ' + str(writing))
 
             if silentCount > CLOSING_SILENT_INTERVALS:
                 if writing:
