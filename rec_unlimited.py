@@ -85,6 +85,13 @@ def start_recording_agent():
                 print('Silent Audio: ' + str(loudness))
                 silentCount += 1
 
+            if silentCount > CLOSING_SILENT_INTERVALS:
+                if writing:
+                    print('Closing recording: ' + filename)
+                    file.close()
+                    pynormalize.process_files([filename], NORMALIZATION_LEVEL, TARGET_DIR)
+                reset_recording()
+
             if loudCount == 0:
                 print('Standby...')
                 flush_queue()
@@ -96,13 +103,6 @@ def start_recording_agent():
                     file = soundfile.SoundFile(filename, mode='x', samplerate=samplerate, channels=channels)
                     writing = True
                 print('Recorded ' + str(loudCount) + ' loud interval(s).\nWriting: ' + str(writing))
-
-            if silentCount > CLOSING_SILENT_INTERVALS:
-                if writing:
-                    print('Closing recording: ' + filename)
-                    file.close()
-                    pynormalize.process_files([filename], NORMALIZATION_LEVEL, TARGET_DIR)
-                reset_recording()
 
             if writing:
                 for timeInterval in queuedIntervals:
