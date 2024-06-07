@@ -73,9 +73,9 @@ def start_recording_agent():
             while q.qsize() > arrayLength:
                 for _ in range(arrayLength):
                     data.append(q.get())
+            queuedIntervals.append(data)
 
             loudness = audioop.findmax(numpy.array(data), int(arrayLength / 2))
-            queuedIntervals.append(data)
 
             if loudness > RECORDING_THRESHOLD:
                 print('Loud Audio: ' + str(loudness))
@@ -95,7 +95,7 @@ def start_recording_agent():
                     print('Writing to new file: ' + filename)
                     file = soundfile.SoundFile(filename, mode='x', samplerate=samplerate, channels=channels)
                     writing = True
-                print('Recorded ' + str(loudCount) + ' interval(s).\nWriting: ' + str(writing))
+                print('Recorded ' + str(loudCount) + 'loud interval(s).\nWriting: ' + str(writing))
 
             if silentCount > CLOSING_SILENT_INTERVALS:
                 if writing:
