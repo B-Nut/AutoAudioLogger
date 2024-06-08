@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import queue
 import sys
 from time import sleep
@@ -8,7 +7,8 @@ import soundfile
 from pynormalize import pynormalize
 
 from main import CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
-    RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, NORMALIZATION_LEVEL, is_loud, create_file_name
+    RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, NORMALIZATION_LEVEL, is_loud, create_file_name, \
+    RECORDING_THRESHOLD, time_string, loudness
 
 
 def start_agent(targetDevice, verbose=False):
@@ -20,7 +20,7 @@ def start_agent(targetDevice, verbose=False):
     rawInput = queue.Queue()
     queuedIntervals = []
 
-    def remove_oldest_invervals():
+    def remove_oldest_intervals():
         while len(queuedIntervals) > RETAIN_INTERVALS:
             queuedIntervals.pop(0)
 
@@ -28,10 +28,10 @@ def start_agent(targetDevice, verbose=False):
         if len(queuedIntervals) > 0:
             queuedIntervals.pop()
 
-    loudCount: int
-    silenceDuration: int  # in Intervals
-    writtenIntervals: int
-    writing: bool
+    loudCount: int = 0
+    silenceDuration: int = 0  # in Intervals
+    writtenIntervals: int = 0
+    writing: bool = False
 
     def reset_recording():
         nonlocal silenceDuration
@@ -43,10 +43,9 @@ def start_agent(targetDevice, verbose=False):
         nonlocal writing
         writing = False
         print('Standby...')
-        remove_oldest_invervals()
+        remove_oldest_intervals()
 
     def callback(indata, frames, time, status):
-        """This is called (from a separate thread) for each audio block."""
         if status:
             print(status, file=sys.stderr)
         rawInput.put(indata.copy())
@@ -70,7 +69,7 @@ def start_agent(targetDevice, verbose=False):
                     data.append(rawInput.get())
             queuedIntervals.append(data)
 
-            if is_loud(data, arrayLength):
+            if is_loud(data):
                 loudCount += 1
                 silenceDuration = 0
             else:
@@ -78,7 +77,7 @@ def start_agent(targetDevice, verbose=False):
 
             if loudCount == 0:
                 # Standby mode
-                remove_oldest_invervals()  # Retains the set amount of intervals
+                remove_oldest_intervals()  # Retains the set amount of intervals
                 silenceDuration = 0
 
             if silenceDuration > RETAIN_INTERVALS:
@@ -107,8 +106,11 @@ def start_agent(targetDevice, verbose=False):
 
             if (loudCount > 0) & verbose:
                 intervalCount = len(queuedIntervals) + writtenIntervals
+                measured = loudness(data)
                 print('---- Recorder ----' +
-                      '\nLoud: ' + str(loudCount) + '/' + str(MINIMUM_RECORDING_INTERVALS) + ' interval(s)' +
+                      '\nTime: ' + time_string() +
+                      '\nLoud: ' + str(is_loud(data)) + ' (' + str(measured) + '/' + str(RECORDING_THRESHOLD) + ')' +
+                      '\nCaptured: ' + str(loudCount) + '/' + str(MINIMUM_RECORDING_INTERVALS) + ' loud interval(s)' +
                       '\nOn file: ' + str(writtenIntervals) + '/' + str(intervalCount) + ' interval(s)' +
                       '\nSilence: ' + str(silenceDuration) + '/' + str(CLOSING_SILENT_INTERVALS) + ' interval(s)' +
                       '\n------------------')

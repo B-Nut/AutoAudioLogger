@@ -1,22 +1,21 @@
-import audioop
 import os
 from datetime import datetime
 from typing import Mapping
 
 import numpy
 import pyaudio
-import pydub
 
 import auto_recorder
 
 TARGET_DEVICE_NAME = "Mikrofon (3- USB Audio CODEC )"
-TARGET_DIR = "piano_log"
+TARGET_DIR = "piano_log"  # Directory to save the normalized recordings
+RAW_DIR = "raw_audio"  # Directory to save the raw recordings. Raw files are overwritten if this is set to TARGET_DIR
 NORMALIZATION_LEVEL = -21  # dBFS
-RECORDING_THRESHOLD = 1000  # Threshold for loudness - 1000 is relatively low because my line signal is very clean.
-RECORDING_INTERVAL_S = 3  # Time to wait between recording intervals and checking for loudness
+RECORDING_THRESHOLD = 0.01  # Used to determine if a recorded interval is loud
+RECORDING_INTERVAL_S = 3  # Time of recorded intervals, that are checked for loudness
 MINIMUM_RECORDING_INTERVALS: int = 3  # How many intervals need to be loud before starting a new file
 RETAIN_INTERVALS = 1  # How many intervals of silence to retain before and after all recordings.
-CLOSING_SILENT_INTERVALS = 5  # How many intervals of silence to wait before closing the file
+CLOSING_SILENT_INTERVALS = 10  # How many intervals of silence to wait before closing the file
 
 pyAudio = pyaudio.PyAudio()
 
@@ -30,25 +29,26 @@ def get_target_device() -> Mapping[str, str | int | float]:
             return device
 
 
-def is_loud(data, arrayLength, verbose=False) -> bool:
-    loudness = audioop.findmax(numpy.array(data), int(arrayLength / 2))
-    isLoud = loudness > RECORDING_THRESHOLD
+def loudness(data) -> float:
+    # This is so dumb, but it works for my clean signal.
+    # If your signal is more noisy, I'm interested in your solution.
+    return numpy.array(data).max()
+
+
+def is_loud(data, verbose=False) -> bool:
+    isLoud = loudness(data) > RECORDING_THRESHOLD
     if verbose:
         print('Loudness: ' + str(loudness) + '\nSound detected: ' + str(isLoud))
-    return loudness > RECORDING_THRESHOLD
+    return isLoud
 
 
-def is_loud_experimental(data) -> bool:
-    seq = pydub.AudioSegment(numpy.array(data), frame_rate=44100, sample_width=2, channels=2)
-    print(seq.dBFS)  # Actually DBFs?!
+def time_string() -> str:
+    return datetime.strftime(datetime.now(), '%Y%m%d_%H-%M-%S')
 
 
-def create_file_name():
-    timestring = datetime.strftime(datetime.now(), '%Y%m%d_%H-%M-%S')
-    return os.path.join('raw_audio', timestring + '_audio_log' + '.wav')
+def create_file_name() -> str:
+    return os.path.join(RAW_DIR, time_string() + '_audio_log' + '.wav')
 
 
 if __name__ == "__main__":
-    targetDevice = get_target_device()
-    print(targetDevice)
-    auto_recorder.start_agent(targetDevice, verbose=True)
+    auto_recorder.start_agent(get_target_device(), verbose=True)
