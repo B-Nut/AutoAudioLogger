@@ -38,7 +38,7 @@ def loudness(data) -> float:
 def is_loud(data, verbose=False) -> bool:
     isLoud = loudness(data) > RECORDING_THRESHOLD
     if verbose:
-        print('Loudness: ' + str(loudness) + '\nSound detected: ' + str(isLoud))
+        print('Loudness: ' + str(loudness(data)) + '\nSound detected: ' + str(isLoud))
     return isLoud
 
 
@@ -51,4 +51,8 @@ def create_file_name() -> str:
 
 
 if __name__ == "__main__":
-    auto_recorder.start_agent(get_target_device(), verbose=True)
+    try:
+        auto_recorder.start_agent(get_target_device(), verbose=True)
+    except KeyboardInterrupt:
+        auto_recorder.close_file()
+        print('Interrupted.')

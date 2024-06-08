@@ -4,11 +4,32 @@ from time import sleep
 
 import sounddevice
 import soundfile
+from soundfile import SoundFile
 from pynormalize import pynormalize
 
 from main import CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
     RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, NORMALIZATION_LEVEL, is_loud, create_file_name, \
     RECORDING_THRESHOLD, time_string, loudness
+
+file: SoundFile  # Holds the current recording file, if any
+fileOpen: bool = False  # True if a file is currently being open and recording
+
+
+def new_soundfile(filename: str, sampleRate: int, channels: int):
+    global file
+    global fileOpen
+    print('Starting recording to new file: ' + filename)
+    file = soundfile.SoundFile(filename, mode='x', samplerate=sampleRate, channels=channels)
+    fileOpen = True
+
+
+def close_file():
+    global fileOpen
+    if fileOpen:
+        print('Closing recording: ' + file.name)
+        file.close()
+        pynormalize.process_files([file.name], NORMALIZATION_LEVEL, TARGET_DIR)
+        fileOpen = False
 
 
 def start_agent(targetDevice, verbose=False):
@@ -31,27 +52,24 @@ def start_agent(targetDevice, verbose=False):
     loudCount: int = 0
     silenceDuration: int = 0  # in Intervals
     writtenIntervals: int = 0
-    writing: bool = False
 
-    def reset_recording():
-        nonlocal silenceDuration
-        silenceDuration = 0
+    def reset_recorder():
         nonlocal loudCount
-        loudCount = 0
+        nonlocal silenceDuration
         nonlocal writtenIntervals
+        loudCount = 0
+        silenceDuration = 0
         writtenIntervals = 0
-        nonlocal writing
-        writing = False
-        print('Standby...')
         remove_oldest_intervals()
+        print('Standby...')
+
+    reset_recorder()  # Mainly called here to initially print the "Standby..." recording state >.<
 
     def callback(indata, frames, time, status):
         if status:
             print(status, file=sys.stderr)
         rawInput.put(indata.copy())
 
-    file: soundfile.SoundFile  # Holds the current recording file, if any
-    reset_recording()  # Initialize the standby recording state
     # Start recording to queue "rawInput"
     with sounddevice.InputStream(
             samplerate=sampleRate,
@@ -84,20 +102,14 @@ def start_agent(targetDevice, verbose=False):
                 # Active, but dropping silent intervals
                 remove_last_interval()
 
-            if (loudCount >= MINIMUM_RECORDING_INTERVALS) & (writing is False):
-                filename = create_file_name()
-                print('Starting recording to new file: ' + filename)
-                file = soundfile.SoundFile(filename, mode='x', samplerate=sampleRate, channels=channels)
-                writing = True
+            if (loudCount >= MINIMUM_RECORDING_INTERVALS) & (fileOpen is False):
+                new_soundfile(create_file_name(), sampleRate, channels)
 
             if silenceDuration >= CLOSING_SILENT_INTERVALS:
-                if writing:
-                    print('Closing recording: ' + filename)
-                    file.close()
-                    pynormalize.process_files([filename], NORMALIZATION_LEVEL, TARGET_DIR)
-                reset_recording()
+                close_file()
+                reset_recorder()
 
-            if writing:
+            if fileOpen:  # Write queued intervals to the file
                 for timeInterval in queuedIntervals:
                     for data in timeInterval:
                         file.write(data)
