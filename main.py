@@ -35,11 +35,8 @@ def loudness(data) -> float:
     return numpy.array(data).max()
 
 
-def is_loud(data, verbose=False) -> bool:
-    isLoud = loudness(data) > RECORDING_THRESHOLD
-    if verbose:
-        print('Loudness: ' + str(loudness(data)) + '\nSound detected: ' + str(isLoud))
-    return isLoud
+def is_loud(data) -> bool:
+    return loudness(data) > RECORDING_THRESHOLD
 
 
 def time_string() -> str:

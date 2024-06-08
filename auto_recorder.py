@@ -119,10 +119,11 @@ def start_agent(targetDevice, verbose=False):
             if (loudCount > 0) & verbose:
                 intervalCount = len(queuedIntervals) + writtenIntervals
                 measured = loudness(data)
+                fileString = 'File ' + file.name + ': ' if fileOpen else 'No File Open: '
                 print('---- Recorder ----' +
                       '\nTime: ' + time_string() +
                       '\nLoud: ' + str(is_loud(data)) + ' (' + str(measured) + '/' + str(RECORDING_THRESHOLD) + ')' +
                       '\nCaptured: ' + str(loudCount) + '/' + str(MINIMUM_RECORDING_INTERVALS) + ' loud interval(s)' +
-                      '\nOn file: ' + str(writtenIntervals) + '/' + str(intervalCount) + ' interval(s)' +
+                      '\n' + fileString + str(writtenIntervals) + '/' + str(intervalCount) + ' interval(s)' +
                       '\nSilence: ' + str(silenceDuration) + '/' + str(CLOSING_SILENT_INTERVALS) + ' interval(s)' +
                       '\n------------------')
