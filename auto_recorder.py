@@ -3,6 +3,7 @@ import sys
 from time import sleep
 
 import pydub
+from pydub import effects
 import sounddevice
 import soundfile
 from soundfile import SoundFile
@@ -31,7 +32,7 @@ def close_file():
 
         # Post-processing: Normalize and convert to mp3
         originalAudio = pydub.AudioSegment.from_wav(file.name)
-        normalizedAudio = pydub.effects.normalize(originalAudio)
+        normalizedAudio = effects.normalize(originalAudio)
         exportFileName = file.name.replace('.wav', '.mp3').replace(RAW_DIR, TARGET_DIR)
         normalizedAudio.export(exportFileName, format='mp3', bitrate='320k')
         print('Exported to: ' + exportFileName)
