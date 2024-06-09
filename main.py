@@ -10,7 +10,6 @@ import auto_recorder
 TARGET_DEVICE_NAME = "Mikrofon (3- USB Audio CODEC )"
 TARGET_DIR = "piano_log"  # Directory to save the normalized recordings
 RAW_DIR = "raw_audio"  # Directory to save the raw recordings. Raw files are overwritten if this is set to TARGET_DIR
-NORMALIZATION_LEVEL = -21  # dBFS
 RECORDING_THRESHOLD = 0.01  # Used to determine if a recorded interval is loud
 RECORDING_INTERVAL_S = 3  # Time of recorded intervals, that are checked for loudness
 MINIMUM_RECORDING_INTERVALS: int = 3  # How many intervals need to be loud before starting a new file

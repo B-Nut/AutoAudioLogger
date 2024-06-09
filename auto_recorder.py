@@ -6,10 +6,9 @@ import pydub
 import sounddevice
 import soundfile
 from soundfile import SoundFile
-from pynormalize import pynormalize
 
 from main import CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
-    RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, NORMALIZATION_LEVEL, is_loud, create_file_name, \
+    RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, is_loud, create_file_name, \
     RECORDING_THRESHOLD, time_string, loudness, RAW_DIR
 
 file: SoundFile  # Holds the current recording file, if any
