@@ -2,6 +2,7 @@ import queue
 import sys
 from time import sleep
 
+import pydub
 import sounddevice
 import soundfile
 from soundfile import SoundFile
@@ -9,7 +10,7 @@ from pynormalize import pynormalize
 
 from main import CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
     RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, NORMALIZATION_LEVEL, is_loud, create_file_name, \
-    RECORDING_THRESHOLD, time_string, loudness
+    RECORDING_THRESHOLD, time_string, loudness, RAW_DIR
 
 file: SoundFile  # Holds the current recording file, if any
 fileOpen: bool = False  # True if a file is currently being open and recording
@@ -28,7 +29,14 @@ def close_file():
     if fileOpen:
         print('Closing recording: ' + file.name)
         file.close()
-        pynormalize.process_files([file.name], NORMALIZATION_LEVEL, TARGET_DIR)
+
+        # Post-processing: Normalize and convert to mp3
+        originalAudio = pydub.AudioSegment.from_wav(file.name)
+        normalizedAudio = pydub.effects.normalize(originalAudio)
+        exportFileName = file.name.replace('.wav', '.mp3').replace(RAW_DIR, TARGET_DIR)
+        normalizedAudio.export(exportFileName, format='mp3', bitrate='320k')
+        print('Exported to: ' + exportFileName)
+
         fileOpen = False
 
 
