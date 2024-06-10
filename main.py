@@ -33,12 +33,15 @@ def get_target_device() -> Mapping[str, str | int | float]:
 def loudness(data) -> float:
     # This is so dumb, but it works for my clean signal.
     # If your signal is more noisy, I'm interested in your solution.
-    flat_data = flatten(data) if data[0] is not float else data
+    flat_data = flatten(data)
     return numpy.array(flat_data).max()
 
 
 def flatten(data):
-    return [beep for dat in data for beep in dat]
+    try:
+        return flatten([beep for dat in data for beep in dat])
+    except TypeError:
+        return data
 
 
 def is_loud(data) -> bool:
