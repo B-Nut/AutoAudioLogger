@@ -1,3 +1,4 @@
+import logging as l
 import queue
 import sys
 from time import sleep
@@ -19,7 +20,7 @@ fileOpen: bool = False  # True if a file is currently being open and recording
 def new_soundfile(filename: str, sampleRate: int, channels: int):
     global file
     global fileOpen
-    print('Starting recording to new file: ' + filename)
+    l.info('Starting recording to new file: ' + filename)
     file = soundfile.SoundFile(filename, mode='x', samplerate=sampleRate, channels=channels)
     fileOpen = True
 
@@ -27,15 +28,15 @@ def new_soundfile(filename: str, sampleRate: int, channels: int):
 def close_file():
     global fileOpen
     if fileOpen:
-        print('Closing recording: ' + file.name)
+        l.info('Closing recording: ' + file.name)
         file.close()
 
         # Post-processing: Normalize and convert to mp3
         originalAudio = pydub.AudioSegment.from_wav(file.name)
         normalizedAudio = effects.normalize(originalAudio)
         exportFileName = file.name.replace('.wav', '.mp3').replace(RAW_DIR, TARGET_DIR)
-        normalizedAudio.export(exportFileName, format='mp3', bitrate='320k')
-        print('Exported to: ' + exportFileName)
+        normalizedAudio.export(exportFileName, format='mp3', bitrate='256k')
+        l.info('Exported to: ' + exportFileName)
 
         fileOpen = False
 
@@ -69,9 +70,9 @@ def start_agent(targetDevice, verbose=False):
         silenceDuration = 0
         writtenIntervals = 0
         remove_oldest_intervals()
-        print('Standby...')
+        l.info('Standby...')
 
-    reset_recorder()  # Mainly called here to initially print the "Standby..." recording state >.<
+    reset_recorder()  # Mainly called here to initially l.info the "Standby..." recording state >.<
 
     def callback(indata, frames, time, status):
         if status:
@@ -128,10 +129,9 @@ def start_agent(targetDevice, verbose=False):
                 intervalCount = len(queuedIntervals) + writtenIntervals
                 measured = loudness(data)
                 fileString = 'File ' + file.name + ': ' if fileOpen else 'No File Open: '
-                print('---- Recorder ----' +
-                      '\nTime: ' + time_string() +
-                      '\nLoud: ' + str(is_loud(data)) + ' (' + str(measured) + '/' + str(RECORDING_THRESHOLD) + ')' +
-                      '\nCaptured: ' + str(loudCount) + '/' + str(MINIMUM_RECORDING_INTERVALS) + ' loud interval(s)' +
-                      '\n' + fileString + str(writtenIntervals) + '/' + str(intervalCount) + ' interval(s)' +
-                      '\nSilence: ' + str(silenceDuration) + '/' + str(CLOSING_SILENT_INTERVALS) + ' interval(s)' +
-                      '\n------------------')
+                l.info('\n---- Recorder ----' +
+                       '\nLoud: ' + str(is_loud(data)) + ' (' + str(measured) + '/' + str(RECORDING_THRESHOLD) + ')' +
+                       '\nCaptured: ' + str(loudCount) + '/' + str(MINIMUM_RECORDING_INTERVALS) + ' loud interval(s)' +
+                       '\n' + fileString + str(writtenIntervals) + '/' + str(intervalCount) + ' interval(s)' +
+                       '\nSilence: ' + str(silenceDuration) + '/' + str(CLOSING_SILENT_INTERVALS) + ' interval(s)' +
+                       '\n------------------')

@@ -1,4 +1,7 @@
+import atexit
+import logging
 import os
+import sys
 from datetime import datetime
 from typing import Mapping
 
@@ -59,8 +62,7 @@ def create_file_name() -> str:
 
 
 if __name__ == "__main__":
-    try:
-        auto_recorder.start_agent(get_target_device(), verbose=True)
-    except KeyboardInterrupt:
-        auto_recorder.close_file()
-        print('Interrupted.')
+    atexit.register(auto_recorder.close_file)
+    logging.basicConfig(level=logging.INFO, filename=os.path.join('logs', time_string() + '_auto_recorder.log'),
+                        filemode='a+', format="%(asctime)-15s %(levelname)-8s %(message)s")
+    auto_recorder.start_agent(get_target_device())
