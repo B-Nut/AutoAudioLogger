@@ -10,10 +10,12 @@ import auto_recorder
 TARGET_DEVICE_NAME = "Mikrofon (3- USB Audio CODEC )"
 TARGET_DIR = "piano_log"  # Directory to save the normalized recordings
 RAW_DIR = "raw_audio"  # Directory to save the raw recordings. Raw files are overwritten if this is set to TARGET_DIR
+TARGET_DIR = "piano_log"  # Directory to save the normalized mp3 recordings
+RAW_DIR = "raw_audio"  # Directory to save the raw recordings
 RECORDING_THRESHOLD = 0.01  # Used to determine if a recorded interval is loud
 RECORDING_INTERVAL_S = 3  # Time of recorded intervals, that are checked for loudness
 MINIMUM_RECORDING_INTERVALS: int = 3  # How many intervals need to be loud before starting a new file
-RETAIN_INTERVALS = 1  # How many intervals of silence to retain before and after all recordings.
+RETAIN_INTERVALS = 1  # How many intervals of silence to retain before and after all recordings
 CLOSING_SILENT_INTERVALS = 10  # How many intervals of silence to wait before closing the file
 
 pyAudio = pyaudio.PyAudio()
@@ -31,7 +33,12 @@ def get_target_device() -> Mapping[str, str | int | float]:
 def loudness(data) -> float:
     # This is so dumb, but it works for my clean signal.
     # If your signal is more noisy, I'm interested in your solution.
-    return numpy.array(data).max()
+    flat_data = flatten(data) if data[0] is not float else data
+    return numpy.array(flat_data).max()
+
+
+def flatten(data):
+    return [beep for dat in data for beep in dat]
 
 
 def is_loud(data) -> bool:
