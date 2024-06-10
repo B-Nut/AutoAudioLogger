@@ -31,16 +31,18 @@ def get_target_device() -> Mapping[str, str | int | float]:
 
 
 def loudness(data) -> float:
-    # This is so dumb, but it works for my clean signal.
-    # If your signal is more noisy, I'm interested in your solution.
-    flat_data = flatten(data)
-    return numpy.array(flat_data).max()
+    try:
+        # This is so dumb, but it works for my clean signal.
+        # If your signal is more noisy, I'm interested in your solution.
+        return numpy.array(data).max()
+    except ValueError:  # On Unix, the data is the same, but nested weirdly.
+        return loudness(flatten(data))
 
 
 def flatten(data):
     try:
-        return flatten([beep for dat in data for beep in dat])
-    except TypeError:
+        return [beep for dat in data for beep in dat]  # Take dat from data, then beep from dat.
+    except TypeError:  # Elements in data are not iterable, no nested data to flatten.
         return data
 
 
