@@ -1,4 +1,4 @@
-I got the line out of an E-Piano hooked into a USB sound card. 
+I got the line out of an E-Piano hooked into a USB sound card.
 
 The script opens the device as an input stream and measures the incoming loudness indefinitely to compare against a set threshold.
 - If the loudness threshold is not met, the script stays in stand by: It retains the specified intervals of silence, but drops anything older.
@@ -8,3 +8,7 @@ The script opens the device as an input stream and measures the incoming loudnes
 - Recording to the same file can continue, before the recorder goes back to stand by.
 - After a set amount of silent intervals in a row, the caching or recording stops and the script goes to stand by.
 - When the script goes to stand by and a file gets closed, the script normalizes the wave file and exports it as mp3.
+
+HINT: Since this script is exporting the audio as MP3, it needs FFMPEG installed on the system to run.
+
+(This repository is forked from my own inactive account)
