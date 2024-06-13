@@ -1,7 +1,6 @@
 import atexit
 import logging
 import os
-import sys
 from datetime import datetime
 from typing import Mapping
 
@@ -10,9 +9,7 @@ import pyaudio
 
 import auto_recorder
 
-TARGET_DEVICE_NAME = "Mikrofon (3- USB Audio CODEC )"
-TARGET_DIR = "piano_log"  # Directory to save the normalized recordings
-RAW_DIR = "raw_audio"  # Directory to save the raw recordings. Raw files are overwritten if this is set to TARGET_DIR
+TARGET_DEVICE_NAME = "USB Audio CODEC"
 TARGET_DIR = "piano_log"  # Directory to save the normalized mp3 recordings
 RAW_DIR = "raw_audio"  # Directory to save the raw recordings
 RECORDING_THRESHOLD = 0.01  # Used to determine if a recorded interval is loud
@@ -29,7 +26,7 @@ def get_target_device() -> Mapping[str, str | int | float]:
     deviceCount = hostInfo.get('deviceCount')
     for i in range(deviceCount):
         device = pyAudio.get_device_info_by_host_api_device_index(0, i)
-        if device.get('name') == TARGET_DEVICE_NAME:
+        if TARGET_DEVICE_NAME in device.get('name'):
             return device
 
 
