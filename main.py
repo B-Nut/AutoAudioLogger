@@ -1,6 +1,7 @@
 import atexit
 import logging
 import os
+import sys
 from datetime import datetime
 from typing import Mapping
 
@@ -27,7 +28,9 @@ def get_target_device() -> Mapping[str, str | int | float]:
     for i in range(deviceCount):
         device = pyAudio.get_device_info_by_host_api_device_index(0, i)
         if TARGET_DEVICE_NAME in device.get('name'):
+            logging.info("Recording device: " + str(device.get('name')))
             return device
+    raise LookupError("No device containing '" + TARGET_DEVICE_NAME + "' found.")
 
 
 def loudness(data) -> float:
@@ -58,8 +61,13 @@ def create_file_name() -> str:
     return os.path.join(RAW_DIR, time_string() + '_audio_log' + '.wav')
 
 
-if __name__ == "__main__":
-    atexit.register(auto_recorder.close_file)
+def initialize_logging():
     logging.basicConfig(level=logging.INFO, filename=os.path.join('logs', time_string() + '_auto_recorder.log'),
                         filemode='a+', format="%(asctime)-15s %(levelname)-8s %(message)s")
+    logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+
+if __name__ == "__main__":
+    atexit.register(auto_recorder.close_file)
+    initialize_logging()
     auto_recorder.start_agent(get_target_device())
