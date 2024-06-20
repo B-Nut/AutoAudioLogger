@@ -1,4 +1,5 @@
 import logging as l
+import os
 import queue
 import sys
 from time import sleep
@@ -12,7 +13,7 @@ from soundfile import SoundFile
 
 from main import CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
     RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, is_loud, create_file_name, \
-    RECORDING_THRESHOLD, time_string, loudness, RAW_DIR, ARTIST, ALBUM
+    RECORDING_THRESHOLD, loudness, RAW_DIR, ARTIST, ALBUM
 
 file: SoundFile  # Holds the current recording file, if any
 fileOpen: bool = False  # True if a file is currently being open and recording
@@ -42,6 +43,7 @@ def close_file():
         mp3File.tag.artist = ARTIST
         mp3File.tag.album_artist = ARTIST
         mp3File.tag.album = ALBUM
+        mp3File.tag.title = os.path.basename(exportFileName).replace('.mp3', '')
         mp3File.tag.save()
         l.info('Exported to: ' + exportFileName)
 
