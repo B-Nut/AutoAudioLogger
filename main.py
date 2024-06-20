@@ -17,7 +17,10 @@ RECORDING_THRESHOLD = 0.01  # Used to determine if a recorded interval is loud
 RECORDING_INTERVAL_S = 3  # Time of recorded intervals, that are checked for loudness
 MINIMUM_RECORDING_INTERVALS: int = 3  # How many intervals need to be loud before starting a new file
 RETAIN_INTERVALS = 1  # How many intervals of silence to retain before and after all recordings
-CLOSING_SILENT_INTERVALS = 10  # How many intervals of silence to wait before closing the file
+CLOSING_SILENT_INTERVALS = 3  # How many intervals of silence to wait before closing the file
+
+ARTIST = "BNut"
+ALBUM = "Piano Log"
 
 pyAudio = pyaudio.PyAudio()
 

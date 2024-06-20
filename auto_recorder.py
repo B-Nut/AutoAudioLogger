@@ -3,6 +3,7 @@ import queue
 import sys
 from time import sleep
 
+import eyed3
 import pydub
 from pydub import effects
 import sounddevice
@@ -11,7 +12,7 @@ from soundfile import SoundFile
 
 from main import CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
     RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, is_loud, create_file_name, \
-    RECORDING_THRESHOLD, time_string, loudness, RAW_DIR
+    RECORDING_THRESHOLD, time_string, loudness, RAW_DIR, ARTIST, ALBUM
 
 file: SoundFile  # Holds the current recording file, if any
 fileOpen: bool = False  # True if a file is currently being open and recording
@@ -34,8 +35,14 @@ def close_file():
         # Post-processing: Normalize and convert to mp3
         originalAudio = pydub.AudioSegment.from_wav(file.name)
         normalizedAudio = effects.normalize(originalAudio)
+        normalizedAudio.export(file.name, format='wav')
         exportFileName = file.name.replace('.wav', '.mp3').replace(RAW_DIR, TARGET_DIR)
         normalizedAudio.export(exportFileName, format='mp3', bitrate='256k')
+        mp3File = eyed3.load(exportFileName)
+        mp3File.tag.artist = ARTIST
+        mp3File.tag.album_artist = ARTIST
+        mp3File.tag.album = ALBUM
+        mp3File.tag.save()
         l.info('Exported to: ' + exportFileName)
 
         fileOpen = False
@@ -61,6 +68,7 @@ def start_agent(targetDevice, verbose=False):
     loudCount: int = 0
     silenceDuration: int = 0  # in Intervals
     writtenIntervals: int = 0
+    newFileName: str = 'better_than_crashed.wav'
 
     def reset_recorder():
         nonlocal loudCount
@@ -111,8 +119,13 @@ def start_agent(targetDevice, verbose=False):
                 # Active, but dropping silent intervals
                 remove_last_interval()
 
+            if loudCount == 1:
+                # First loud interval
+                l.info('Detected sound! Caching intervals...')
+                newFileName = create_file_name()
+
             if (loudCount >= MINIMUM_RECORDING_INTERVALS) & (fileOpen is False):
-                new_soundfile(create_file_name(), sampleRate, channels)
+                new_soundfile(newFileName, sampleRate, channels)
 
             if silenceDuration >= CLOSING_SILENT_INTERVALS:
                 close_file()
