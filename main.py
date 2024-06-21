@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 from datetime import datetime
+from time import sleep
 from typing import Mapping
 
 import numpy
@@ -28,12 +29,14 @@ pyAudio = pyaudio.PyAudio()
 def get_target_device() -> Mapping[str, str | int | float]:
     hostInfo = pyAudio.get_host_api_info_by_index(0)
     deviceCount = hostInfo.get('deviceCount')
-    for i in range(deviceCount):
-        device = pyAudio.get_device_info_by_host_api_device_index(0, i)
-        if TARGET_DEVICE_NAME in device.get('name'):
-            logging.info("Recording device: " + str(device.get('name')))
-            return device
-    raise LookupError("No device containing '" + TARGET_DEVICE_NAME + "' found.")
+    while True:
+        for i in range(deviceCount):
+            device = pyAudio.get_device_info_by_host_api_device_index(0, i)
+            if TARGET_DEVICE_NAME in device.get('name'):
+                logging.info("Recording device: " + str(device.get('name')))
+                return device
+        logging.info("No device containing '" + TARGET_DEVICE_NAME + "' found. Trying again in 10 seconds.")
+        sleep(10)
 
 
 def loudness(data) -> float:
