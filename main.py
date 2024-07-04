@@ -27,9 +27,9 @@ pyAudio = pyaudio.PyAudio()
 
 
 def get_target_device() -> Mapping[str, str | int | float]:
-    hostInfo = pyAudio.get_host_api_info_by_index(0)
-    deviceCount = hostInfo.get('deviceCount')
     while True:
+        hostInfo = pyAudio.get_host_api_info_by_index(0)
+        deviceCount = hostInfo.get('deviceCount')
         for i in range(deviceCount):
             device = pyAudio.get_device_info_by_host_api_device_index(0, i)
             if TARGET_DEVICE_NAME in device.get('name'):
