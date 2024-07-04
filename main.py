@@ -60,10 +60,19 @@ def is_loud(data) -> bool:
 
 
 def time_string() -> str:
-    return datetime.strftime(datetime.now(), '%Y%m%d_%H-%M-%S')
+    return datetime.strftime(datetime.now(), '%Y%m%d_%H-%M-%S')  # 20210901_12-34-56
+
+
+def date_string() -> str:
+    return datetime.strftime(datetime.now(), '%Y%m%d')
+
+
+def nice_date_string() -> str:
+    return datetime.strftime(datetime.now(), '%B %Y')
 
 
 def create_file_name() -> str:
+    os.makedirs(RAW_DIR, exist_ok=True)
     return os.path.join(RAW_DIR, time_string() + '_audio_log' + '.wav')
 
 

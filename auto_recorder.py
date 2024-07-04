@@ -1,3 +1,4 @@
+import datetime
 import logging as l
 import os
 import queue
@@ -13,10 +14,11 @@ from soundfile import SoundFile
 
 from main import CLOSING_SILENT_INTERVALS, RETAIN_INTERVALS, \
     RECORDING_INTERVAL_S, MINIMUM_RECORDING_INTERVALS, TARGET_DIR, is_loud, create_file_name, \
-    RECORDING_THRESHOLD, loudness, RAW_DIR, ARTIST, ALBUM
+    RECORDING_THRESHOLD, loudness, RAW_DIR, ARTIST, ALBUM, nice_date_string, date_string
 
 file: SoundFile  # Holds the current recording file, if any
 fileOpen: bool = False  # True if a file is currently being open and recording
+albumName: str = ALBUM + ' ' + nice_date_string()  # Album name for the current recording
 
 
 def new_soundfile(filename: str, sampleRate: int, channels: int):
@@ -38,11 +40,12 @@ def close_file():
         normalizedAudio = effects.normalize(originalAudio)
         normalizedAudio.export(file.name, format='wav')
         exportFileName = file.name.replace('.wav', '.mp3').replace(RAW_DIR, TARGET_DIR)
+        os.makedirs(os.path.dirname(exportFileName), exist_ok=True)  # Create the target directory if it doesn't exist
         normalizedAudio.export(exportFileName, format='mp3', bitrate='256k')
         mp3File = eyed3.load(exportFileName)
         mp3File.tag.artist = ARTIST
         mp3File.tag.album_artist = ARTIST
-        mp3File.tag.album = ALBUM
+        mp3File.tag.album = albumName
         mp3File.tag.title = os.path.basename(exportFileName).replace('.mp3', '')
         mp3File.tag.save()
         l.info('Exported to: ' + exportFileName)
@@ -70,7 +73,7 @@ def start_agent(targetDevice, verbose=False):
     loudCount: int = 0
     silenceDuration: int = 0  # in Intervals
     writtenIntervals: int = 0
-    newFileName: str = 'better_than_crashed.wav'
+    newFileName: str = date_string()
 
     def reset_recorder():
         nonlocal loudCount
@@ -125,6 +128,8 @@ def start_agent(targetDevice, verbose=False):
                 # First loud interval
                 l.info('Detected sound! Caching intervals...')
                 newFileName = create_file_name()
+                global albumName
+                albumName = ALBUM + ' ' + nice_date_string()  # Updates the album name for the current recording
 
             if (loudCount >= MINIMUM_RECORDING_INTERVALS) & (fileOpen is False):
                 new_soundfile(newFileName, sampleRate, channels)
